@@ -660,7 +660,7 @@ function CoffeeLab() {
           {Array.from({length:24}).map((_,i)=>(
             <div key={i} style={{position:"fixed",top:-10,left:`${Math.random()*100}%`,width:8+Math.random()*8,height:8+Math.random()*8,borderRadius:Math.random()>0.5?"50%":"2px",background:["#FF7043","#66BB6A","#FFA726","#42A5F5","#AB47BC","#FFCA28","#E8985A","#D4A574"][i%8],zIndex:201,animation:`confetti ${1.5+Math.random()*1.5}s ease-out ${Math.random()*0.5}s forwards`,pointerEvents:"none"}} />
           ))}
-          <div style={{position:"fixed",top:60,left:"50%",transform:"translateX(-50%)",zIndex:200,animation:"fadeInUp 0.5s ease-out",...glassStyle(dark),padding:"16px 24px",display:"flex",alignItems:"center",gap:12,minWidth:280,boxShadow:"0 8px 40px rgba(212,165,116,0.4)"}}>
+          <div style={{position:"fixed",top:60,left:0,right:0,margin:"0 auto",zIndex:200,animation:"fadeInUp 0.5s ease-out",...glassStyle(dark),padding:"16px 24px",display:"flex",alignItems:"center",gap:12,width:"fit-content",minWidth:280,boxShadow:"0 8px 40px rgba(212,165,116,0.4)"}}>
             <div style={{fontSize:36,animation:"pulse 0.8s ease-in-out infinite"}}>{newAchievement.icon}</div>
             <div>
               <div style={{fontSize:12,color:theme.highlight,fontWeight:600,letterSpacing:"0.05em"}}>{lang==="zh"?"🎉 成就解锁！":"🎉 Achievement Unlocked!"}</div>
@@ -714,7 +714,7 @@ function BottomSheet({ children, onClose, theme, dark }) {
   return (
     <div style={{position:"fixed",inset:0,zIndex:150}}>
       <div onClick={onClose} style={{position:"absolute",inset:0,background:"rgba(0,0,0,0.5)",animation:"fadeIn 0.2s"}} />
-      <div style={{position:"absolute",bottom:0,left:"50%",transform:"translateX(-50%)",width:"100%",maxWidth:480,maxHeight:"85vh",overflow:"auto",animation:"slideUp 0.3s ease-out",...glassStyle(dark),borderRadius:"20px 20px 0 0",padding:"12px 20px 32px"}}>
+      <div style={{position:"absolute",bottom:0,left:0,right:0,margin:"0 auto",width:"100%",maxWidth:480,maxHeight:"85vh",overflow:"auto",animation:"slideUp 0.3s ease-out",...glassStyle(dark),borderRadius:"20px 20px 0 0",padding:"12px 20px 32px"}}>
         <div style={{width:36,height:4,borderRadius:2,background:dark?"rgba(255,255,255,0.2)":"rgba(0,0,0,0.15)",margin:"0 auto 16px"}} />
         {children}
       </div>
@@ -2002,7 +2002,7 @@ function TimerOverlay({ theme, dark, onClose }) {
   return (
     <div style={{ position: "fixed", inset: 0, zIndex: 160 }}>
       <div onClick={onClose} style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.6)", animation: "fadeIn 0.2s" }} />
-      <div style={{ position: "absolute", bottom: 0, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 480, maxHeight: "90vh", overflow: "auto", animation: "slideUp 0.3s ease-out", ...glassStyle(dark), borderRadius: "20px 20px 0 0", padding: "16px 20px 40px" }}>
+      <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, margin: "0 auto", width: "100%", maxWidth: 480, maxHeight: "90vh", overflow: "auto", animation: "slideUp 0.3s ease-out", ...glassStyle(dark), borderRadius: "20px 20px 0 0", padding: "16px 20px 40px" }}>
         <div style={{ width: 36, height: 4, borderRadius: 2, background: dark ? "rgba(255,255,255,0.2)" : "rgba(0,0,0,0.15)", margin: "0 auto 12px" }} />
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
           <h3 style={{ fontSize: 20, fontWeight: 700, margin: 0, color: theme.text }}>🫖 V60 手冲助手</h3>
@@ -2194,7 +2194,7 @@ function CompareOverlay({ theme, dark, onClose, onSelect }) {
   return (
     <div style={{ position: "fixed", inset: 0, zIndex: 160 }}>
       <div onClick={onClose} style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.6)", animation: "fadeIn 0.2s" }} />
-      <div style={{ position: "absolute", bottom: 0, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 480, maxHeight: "90vh", overflow: "auto", animation: "slideUp 0.3s ease-out", ...glassStyle(dark), borderRadius: "20px 20px 0 0", padding: "16px 20px 40px" }}>
+      <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, margin: "0 auto", width: "100%", maxWidth: 480, maxHeight: "90vh", overflow: "auto", animation: "slideUp 0.3s ease-out", ...glassStyle(dark), borderRadius: "20px 20px 0 0", padding: "16px 20px 40px" }}>
         <div style={{ width: 36, height: 4, borderRadius: 2, background: dark ? "rgba(255,255,255,0.2)" : "rgba(0,0,0,0.15)", margin: "0 auto 16px" }} />
 
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
@@ -2312,7 +2312,7 @@ function FlavorWheelOverlay({ theme, dark, onClose, onSelect }) {
     <div style={{ position: "fixed", inset: 0, zIndex: 160, display: "flex", flexDirection: "column" }}>
       <div onClick={onClose} style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.6)", animation: "fadeIn 0.2s" }} />
       {/* Full-screen panel, flex layout so wheel stays put */}
-      <div style={{ position: "absolute", bottom: 0, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 480, height: "85vh", display: "flex", flexDirection: "column", animation: "slideUp 0.3s ease-out", ...glassStyle(dark), borderRadius: "20px 20px 0 0", overflow: "hidden" }}>
+      <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, margin: "0 auto", width: "100%", maxWidth: 480, height: "85vh", display: "flex", flexDirection: "column", animation: "slideUp 0.3s ease-out", ...glassStyle(dark), borderRadius: "20px 20px 0 0", overflow: "hidden" }}>
         {/* Header - fixed */}
         <div style={{ padding: "12px 20px 0", flexShrink: 0 }}>
           <div style={{ width: 36, height: 4, borderRadius: 2, background: dark ? "rgba(255,255,255,0.2)" : "rgba(0,0,0,0.15)", margin: "0 auto 12px" }} />
