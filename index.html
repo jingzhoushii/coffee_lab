@@ -414,15 +414,27 @@ const STORAGE_KEYS = { users: "coffee-lab:users", settings: "coffee-lab:settings
 const userKey = (uid) => `coffee-lab:user:${uid}`;
 
 async function loadStorage(key, fallback) {
-  try { const r = await window.storage.get(key); return r ? JSON.parse(r.value) : fallback; }
-  catch { return fallback; }
+  try {
+    if (window.storage && typeof window.storage.get === "function") {
+      const r = await window.storage.get(key);
+      return r ? JSON.parse(r.value) : fallback;
+    }
+    const r = localStorage.getItem(key);
+    return r ? JSON.parse(r) : fallback;
+  } catch { return fallback; }
 }
 async function saveStorage(key, val) {
-  try { await window.storage.set(key, JSON.stringify(val)); } catch(e) { console.error("Save error:", e); }
+  try {
+    if (window.storage && typeof window.storage.set === "function") {
+      await window.storage.set(key, JSON.stringify(val));
+    } else {
+      localStorage.setItem(key, JSON.stringify(val));
+    }
+  } catch(e) { console.error("Save error:", e); }
 }
 
-const defaultUserData = (name) => ({
-  profile: { name, avatar: "☕", createdAt: new Date().toISOString() },
+const defaultUserData = (name, avatar) => ({
+  profile: { name, avatar: avatar || "☕", createdAt: new Date().toISOString() },
   records: [],
   achievements: [],
   favorites: [],
@@ -492,12 +504,12 @@ function CoffeeLab() {
     saveStorage(STORAGE_KEYS.settings, { theme: dark ? "dark" : "light", currentUserId });
   }, [dark, currentUserId]);
 
-  const createUser = async (name) => {
+  const createUser = async (name, avatar) => {
     const id = `user-${Date.now()}`;
     const newUsers = [...users, { id, name }];
     setUsers(newUsers);
     await saveStorage(STORAGE_KEYS.users, newUsers);
-    const ud = defaultUserData(name);
+    const ud = defaultUserData(name, avatar);
     setUserData(ud);
     setCurrentUserId(id);
     await saveStorage(userKey(id), ud);
@@ -575,7 +587,7 @@ function CoffeeLab() {
           <div style={{fontSize:72,marginBottom:24}}>☕</div>
           <h1 style={{fontSize:32,fontWeight:800,background:`linear-gradient(135deg, ${theme.primary}, ${theme.highlight})`,WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",marginBottom:8,letterSpacing:"-0.03em"}}>Coffee Lab</h1>
           <p style={{color:theme.textSec,fontSize:15,marginBottom:40,lineHeight:1.6}}>{lang==="zh"?"探索世界精品咖啡":"Explore World Specialty Coffee"}<br/>{lang==="zh"?"记录你的咖啡旅程":"Record Your Coffee Journey"}</p>
-          <button onClick={()=>setShowNewUser(true)} style={{background:`linear-gradient(135deg, ${theme.primary}, ${theme.highlight})`,color:"#FFF",border:"none",borderRadius:14,padding:"16px 48px",fontSize:17,fontWeight:600,cursor:"pointer",boxShadow:"0 4px 20px rgba(111,78,55,0.3)",transition:"transform 0.15s",letterSpacing:"0.01em"}} onMouseDown={e=>e.target.style.transform="scale(0.97)"} onMouseUp={e=>e.target.style.transform="scale(1)"}>
+          <button onClick={()=>setShowNewUser(true)} style={{background:`linear-gradient(135deg, ${theme.primary}, ${theme.highlight})`,color:"#FFF",border:"none",borderRadius:14,padding:"16px 48px",fontSize:17,fontWeight:600,cursor:"pointer",boxShadow:"0 4px 20px rgba(111,78,55,0.3)",transition:"transform 0.15s",letterSpacing:"0.01em"}} onMouseDown={e=>e.target.style.transform="scale(0.97)"} onMouseUp={e=>e.target.style.transform="scale(1)"} onTouchStart={e=>e.target.style.transform="scale(0.97)"} onTouchEnd={e=>e.target.style.transform="scale(1)"}>
             {lang==="zh"?"开始探索":"Get Started"}
           </button>
         </div>
@@ -584,7 +596,7 @@ function CoffeeLab() {
   }
 
   if (showNewUser) {
-    return <NewUserScreen onCreate={createUser} onCancel={()=>setShowNewUser(false)} theme={theme} dark={dark} />;
+    return <NewUserScreen onCreate={createUser} onCancel={()=>setShowNewUser(false)} theme={theme} dark={dark} lang={lang} />;
   }
 
   return (
@@ -648,7 +660,7 @@ function CoffeeLab() {
           {Array.from({length:24}).map((_,i)=>(
             <div key={i} style={{position:"fixed",top:-10,left:`${Math.random()*100}%`,width:8+Math.random()*8,height:8+Math.random()*8,borderRadius:Math.random()>0.5?"50%":"2px",background:["#FF7043","#66BB6A","#FFA726","#42A5F5","#AB47BC","#FFCA28","#E8985A","#D4A574"][i%8],zIndex:201,animation:`confetti ${1.5+Math.random()*1.5}s ease-out ${Math.random()*0.5}s forwards`,pointerEvents:"none"}} />
           ))}
-          <div style={{position:"fixed",top:60,left:"50%",transform:"translateX(-50%)",zIndex:200,animation:"fadeInUp 0.5s ease-out",...glassStyle(dark),padding:"16px 24px",display:"flex",alignItems:"center",gap:12,minWidth:280,boxShadow:"0 8px 40px rgba(212,165,116,0.4)"}}>
+          <div style={{position:"fixed",top:60,left:0,right:0,margin:"0 auto",zIndex:200,animation:"fadeInUp 0.5s ease-out",...glassStyle(dark),padding:"16px 24px",display:"flex",alignItems:"center",gap:12,width:"fit-content",minWidth:280,boxShadow:"0 8px 40px rgba(212,165,116,0.4)"}}>
             <div style={{fontSize:36,animation:"pulse 0.8s ease-in-out infinite"}}>{newAchievement.icon}</div>
             <div>
               <div style={{fontSize:12,color:theme.highlight,fontWeight:600,letterSpacing:"0.05em"}}>{lang==="zh"?"🎉 成就解锁！":"🎉 Achievement Unlocked!"}</div>
@@ -674,22 +686,22 @@ function CoffeeLab() {
 // ============================================================
 // NEW USER SCREEN
 // ============================================================
-function NewUserScreen({ onCreate, onCancel, theme, dark }) {
+function NewUserScreen({ onCreate, onCancel, theme, dark, lang }) {
   const [name, setName] = useState("");
   const [avatar, setAvatar] = useState("☕");
   const avatars = ["☕","🫘","🌿","🏔️","✨","🎯","🌍","🧪"];
   return (
     <div style={{height:"100vh",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",background:theme.bg,fontFamily:"-apple-system,BlinkMacSystemFont,'SF Pro Display','Helvetica Neue',sans-serif",padding:24}}>
       <div style={{fontSize:64,marginBottom:24}}>{avatar}</div>
-      <h2 style={{fontSize:24,fontWeight:700,color:theme.text,marginBottom:32}}>Create Your Coffee Profile</h2>
+      <h2 style={{fontSize:24,fontWeight:700,color:theme.text,marginBottom:32}}>{lang==="en"?"Create Your Coffee Profile":"创建你的咖啡档案"}</h2>
       <div style={{display:"flex",gap:12,marginBottom:24,flexWrap:"wrap",justifyContent:"center"}}>
         {avatars.map(a=>(
           <button key={a} onClick={()=>setAvatar(a)} style={{width:48,height:48,borderRadius:12,border:avatar===a?`2px solid ${theme.highlight}`:`1px solid ${theme.border}`,background:avatar===a?(dark?"rgba(232,152,90,0.15)":"rgba(232,152,90,0.1)"):"transparent",fontSize:24,cursor:"pointer",transition:"all 0.15s"}}>{a}</button>
         ))}
       </div>
       <input value={name} onChange={e=>setName(e.target.value)} placeholder="Enter your name / 输入名字" style={{width:"100%",maxWidth:300,padding:"14px 18px",borderRadius:12,border:`1px solid ${theme.border}`,background:dark?"rgba(255,255,255,0.05)":"rgba(0,0,0,0.03)",color:theme.text,fontSize:16,outline:"none",marginBottom:24,textAlign:"center"}} />
-      <button onClick={()=>name.trim()&&onCreate(name.trim())} disabled={!name.trim()} style={{background:name.trim()?`linear-gradient(135deg,${theme.primary},${theme.highlight})`:"#ccc",color:"#fff",border:"none",borderRadius:14,padding:"14px 48px",fontSize:16,fontWeight:600,cursor:name.trim()?"pointer":"default",opacity:name.trim()?1:0.5}}>
-        开始记录
+      <button onClick={()=>name.trim()&&onCreate(name.trim(), avatar)} disabled={!name.trim()} style={{background:name.trim()?`linear-gradient(135deg,${theme.primary},${theme.highlight})`:"#ccc",color:"#fff",border:"none",borderRadius:14,padding:"14px 48px",fontSize:16,fontWeight:600,cursor:name.trim()?"pointer":"default",opacity:name.trim()?1:0.5}}>
+        {lang==="en"?"Get Started":"开始记录"}
       </button>
     </div>
   );
@@ -702,7 +714,7 @@ function BottomSheet({ children, onClose, theme, dark }) {
   return (
     <div style={{position:"fixed",inset:0,zIndex:150}}>
       <div onClick={onClose} style={{position:"absolute",inset:0,background:"rgba(0,0,0,0.5)",animation:"fadeIn 0.2s"}} />
-      <div style={{position:"absolute",bottom:0,left:"50%",transform:"translateX(-50)",width:"100%",maxWidth:480,maxHeight:"85vh",overflow:"auto",animation:"slideUp 0.3s ease-out",...glassStyle(dark),borderRadius:"20px 20px 0 0",padding:"12px 20px 32px"}}>
+      <div style={{position:"absolute",bottom:0,left:0,right:0,margin:"0 auto",width:"100%",maxWidth:480,maxHeight:"85vh",overflow:"auto",animation:"slideUp 0.3s ease-out",...glassStyle(dark),borderRadius:"20px 20px 0 0",padding:"12px 20px 32px"}}>
         <div style={{width:36,height:4,borderRadius:2,background:dark?"rgba(255,255,255,0.2)":"rgba(0,0,0,0.15)",margin:"0 auto 16px"}} />
         {children}
       </div>
@@ -833,7 +845,7 @@ function DashboardPage({ theme, dark, userData, setTab, setSelectedCoffee, setSh
 
   const tastedIds = new Set(records.map(r => r.coffeeId));
   const unTasted = COFFEE_DB.filter(c => !tastedIds.has(c.id));
-  const recommended = unTasted.length > 0 ? unTasted[Math.floor(Math.random() * unTasted.length)] : null;
+  const recommended = useMemo(() => unTasted.length > 0 ? unTasted[Math.floor(Math.random() * unTasted.length)] : null, [records.length]);
 
   const stats = [
     { label: lang==="zh"?"已品鉴":"Cups", value: records.length, icon: "☕" },
@@ -1496,8 +1508,8 @@ function ProfilePage({ theme, dark, userData, users, currentUserId, switchUser, 
   const [view, setView] = useState("main"); // main | log | stats | achievements
   const records = userData?.records || [];
 
-  if (view === "log") return <LogView records={records} theme={theme} dark={dark} onBack={() => setView("main")} deleteRecord={deleteRecord} />;
-  if (view === "stats") return <StatsView records={records} theme={theme} dark={dark} onBack={() => setView("main")} />;
+  if (view === "log") return <LogView records={records} theme={theme} dark={dark} onBack={() => setView("main")} deleteRecord={deleteRecord} lang={lang} />;
+  if (view === "stats") return <StatsView records={records} theme={theme} dark={dark} onBack={() => setView("main")} lang={lang} />;
   if (view === "achievements") {
     const unlockedSet = new Set(userData?.achievements || []);
     const cats = [
@@ -1604,7 +1616,7 @@ function ProfilePage({ theme, dark, userData, users, currentUserId, switchUser, 
 // ============================================================
 // LOG VIEW
 // ============================================================
-function LogView({ records, theme, dark, onBack, deleteRecord }) {
+function LogView({ records, theme, dark, onBack, deleteRecord, lang }) {
   const [filter, setFilter] = useState("");
   const filtered = filter ? records.filter(r => {
     const c = COFFEE_DB.find(x => x.id === r.coffeeId);
@@ -1617,14 +1629,14 @@ function LogView({ records, theme, dark, onBack, deleteRecord }) {
         <button onClick={onBack} style={{ background: "none", border: "none", cursor: "pointer", padding: 4 }}>
           <ArrowLeft size={22} color={theme.text} />
         </button>
-        <h2 style={{ fontSize: 22, fontWeight: 700, margin: 0 }}>咖啡日志</h2>
-        <span style={{ fontSize: 13, color: theme.textSec, marginLeft: "auto" }}>{records.length} 条</span>
+        <h2 style={{ fontSize: 22, fontWeight: 700, margin: 0 }}>{lang==="en"?"Coffee Log":"咖啡日志"}</h2>
+        <span style={{ fontSize: 13, color: theme.textSec, marginLeft: "auto" }}>{records.length} {lang==="en"?"records":"条"}</span>
       </div>
 
       {records.length === 0 ? (
         <div style={{ textAlign: "center", padding: 48, color: theme.textSec }}>
           <div style={{ fontSize: 48, marginBottom: 16 }}>📝</div>
-          <div>还没有品鉴记录</div>
+          <div>{lang==="en"?"No tasting records yet":"还没有品鉴记录"}</div>
         </div>
       ) : (
         [...filtered].reverse().map((r, i) => {
@@ -1635,7 +1647,7 @@ function LogView({ records, theme, dark, onBack, deleteRecord }) {
               <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                 <span style={{ fontSize: 24 }}>{c.origin.flag}</span>
                 <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 15, fontWeight: 600, color: theme.text }}>{c.name}</div>
+                  <div style={{ fontSize: 15, fontWeight: 600, color: theme.text }}>{lang==="en"?c.name_en:c.name}</div>
                   <div style={{ fontSize: 12, color: theme.textSec }}>
                     {r.date} · {BREW_METHODS.find(b => b.id === r.brewMethod)?.icon} {BREW_METHODS.find(b => b.id === r.brewMethod)?.name} · {"☕".repeat(r.rating)}
                   </div>
@@ -1656,17 +1668,17 @@ function LogView({ records, theme, dark, onBack, deleteRecord }) {
 // ============================================================
 // STATS VIEW
 // ============================================================
-function StatsView({ records, theme, dark, onBack }) {
+function StatsView({ records, theme, dark, onBack, lang }) {
   if (records.length === 0) {
     return (
       <div style={{ padding: "20px 20px 0" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20 }}>
           <button onClick={onBack} style={{ background: "none", border: "none", cursor: "pointer", padding: 4 }}><ArrowLeft size={22} color={theme.text} /></button>
-          <h2 style={{ fontSize: 22, fontWeight: 700, margin: 0 }}>统计面板</h2>
+          <h2 style={{ fontSize: 22, fontWeight: 700, margin: 0 }}>{lang==="en"?"Statistics":"统计面板"}</h2>
         </div>
         <div style={{ textAlign: "center", padding: 48, color: theme.textSec }}>
           <div style={{ fontSize: 48, marginBottom: 16 }}>📊</div>
-          <div>记录更多品鉴来查看统计数据</div>
+          <div>{lang==="en"?"Record more tastings to see statistics":"记录更多品鉴来查看统计数据"}</div>
         </div>
       </div>
     );
@@ -1704,7 +1716,7 @@ function StatsView({ records, theme, dark, onBack }) {
     <div style={{ padding: "20px 20px 0" }}>
       <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20 }}>
         <button onClick={onBack} style={{ background: "none", border: "none", cursor: "pointer", padding: 4 }}><ArrowLeft size={22} color={theme.text} /></button>
-        <h2 style={{ fontSize: 22, fontWeight: 700, margin: 0 }}>统计面板</h2>
+        <h2 style={{ fontSize: 22, fontWeight: 700, margin: 0 }}>{lang==="en"?"Statistics":"统计面板"}</h2>
       </div>
 
       {/* Country Pie */}
@@ -1990,7 +2002,7 @@ function TimerOverlay({ theme, dark, onClose }) {
   return (
     <div style={{ position: "fixed", inset: 0, zIndex: 160 }}>
       <div onClick={onClose} style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.6)", animation: "fadeIn 0.2s" }} />
-      <div style={{ position: "absolute", bottom: 0, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 480, maxHeight: "90vh", overflow: "auto", animation: "slideUp 0.3s ease-out", ...glassStyle(dark), borderRadius: "20px 20px 0 0", padding: "16px 20px 40px" }}>
+      <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, margin: "0 auto", width: "100%", maxWidth: 480, maxHeight: "90vh", overflow: "auto", animation: "slideUp 0.3s ease-out", ...glassStyle(dark), borderRadius: "20px 20px 0 0", padding: "16px 20px 40px" }}>
         <div style={{ width: 36, height: 4, borderRadius: 2, background: dark ? "rgba(255,255,255,0.2)" : "rgba(0,0,0,0.15)", margin: "0 auto 12px" }} />
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
           <h3 style={{ fontSize: 20, fontWeight: 700, margin: 0, color: theme.text }}>🫖 V60 手冲助手</h3>
@@ -2182,7 +2194,7 @@ function CompareOverlay({ theme, dark, onClose, onSelect }) {
   return (
     <div style={{ position: "fixed", inset: 0, zIndex: 160 }}>
       <div onClick={onClose} style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.6)", animation: "fadeIn 0.2s" }} />
-      <div style={{ position: "absolute", bottom: 0, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 480, maxHeight: "90vh", overflow: "auto", animation: "slideUp 0.3s ease-out", ...glassStyle(dark), borderRadius: "20px 20px 0 0", padding: "16px 20px 40px" }}>
+      <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, margin: "0 auto", width: "100%", maxWidth: 480, maxHeight: "90vh", overflow: "auto", animation: "slideUp 0.3s ease-out", ...glassStyle(dark), borderRadius: "20px 20px 0 0", padding: "16px 20px 40px" }}>
         <div style={{ width: 36, height: 4, borderRadius: 2, background: dark ? "rgba(255,255,255,0.2)" : "rgba(0,0,0,0.15)", margin: "0 auto 16px" }} />
 
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
@@ -2300,7 +2312,7 @@ function FlavorWheelOverlay({ theme, dark, onClose, onSelect }) {
     <div style={{ position: "fixed", inset: 0, zIndex: 160, display: "flex", flexDirection: "column" }}>
       <div onClick={onClose} style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.6)", animation: "fadeIn 0.2s" }} />
       {/* Full-screen panel, flex layout so wheel stays put */}
-      <div style={{ position: "absolute", bottom: 0, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 480, height: "85vh", display: "flex", flexDirection: "column", animation: "slideUp 0.3s ease-out", ...glassStyle(dark), borderRadius: "20px 20px 0 0", overflow: "hidden" }}>
+      <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, margin: "0 auto", width: "100%", maxWidth: 480, height: "85vh", display: "flex", flexDirection: "column", animation: "slideUp 0.3s ease-out", ...glassStyle(dark), borderRadius: "20px 20px 0 0", overflow: "hidden" }}>
         {/* Header - fixed */}
         <div style={{ padding: "12px 20px 0", flexShrink: 0 }}>
           <div style={{ width: 36, height: 4, borderRadius: 2, background: dark ? "rgba(255,255,255,0.2)" : "rgba(0,0,0,0.15)", margin: "0 auto 12px" }} />
